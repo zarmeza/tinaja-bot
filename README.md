@@ -63,11 +63,15 @@ and pass `--env-file .env` as usual.
 
 ### What he doesn't know, the web lends
 The engine answers from knowledge that froze at his training; for what the world decided since — today's
-prices, names, weather — he asks the day-lamp instead. First pass: he answers of his own knowledge, or
-ends with a private `NECESITO_AVERIGUAR: <query>` seal. When he seals it, a Brave Search lookup feeds the
-second pass (with sources, but confessed if the say is thin — never invented). The lamp is Brave Search
-under `TINAJA_BRAVE_API_KEY` (free tier, 2000 consultations a month; see `env.sample`); with no
-key set, he just answers of what he knows, as always (`plugin/search.rb`, `plugin/llm.rb`).
+prices, names, weather — the day-lamps answer for him. First pass: the engine answers of his own
+knowledge, or ends with a private `NECESITO_AVERIGUAR: <query>` seal; when he seals it, the lamps fetch
+and the second pass answers upon the findings (with the source given, and confessed when the say is
+thin — never invented). The lamps, none of them needing a key and every one reachable from Venezuela
+(`plugin/search.rb`): dolarapi.com for the dollar and the money of the street, Open-Meteo for the sky of
+Mérida (`TINAJA_HOME_LAT`/`TINAJA_HOME_LON` to relocate), then the day's news from Google News' RSS and
+the rest of the web in Bing's RSS. Optional rungs, a line in `.env` each: your own SearXNG
+(`TINAJA_SEARX_URL`), and Brave Search with `TINAJA_BRAVE_API_KEY` while its quota lasts — to be
+unreachable from Venezuela for now, kept for the day the map moves.
 
 ## Docker
 The image builds on Linux, so add Linux to the gem lockfile once:

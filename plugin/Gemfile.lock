@@ -11,6 +11,7 @@ GEM
   specs:
     minitest (5.27.0)
     rake (13.4.2)
+    rexml (3.4.4)
 
 PLATFORMS
   aarch64-linux
@@ -20,12 +21,14 @@ PLATFORMS
 DEPENDENCIES
   minitest (~> 5.25)
   rake (~> 13.2)
+  rexml (~> 3.4)
   tinaja!
 
 CHECKSUMS
   bundler (4.0.23) sha256=407ba8a1d928f412847f819aa5f8b6aef7c59fb51feb517112af8a165487287b
   minitest (5.27.0) sha256=2d3b17f8a36fe7801c1adcffdbc38233b938eb0b4966e97a6739055a45fa77d5
   rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
+  rexml (3.4.4) sha256=19e0a2c3425dfbf2d4fc1189747bdb2f849b6c5e74180401b15734bc97b5d142
   tinaja (0.1.0)
 
 BUNDLED WITH

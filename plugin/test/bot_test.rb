@@ -16,11 +16,13 @@ class BotTest < Minitest::Test
       'TINAJA_LLM_MODEL' => ENV['TINAJA_LLM_MODEL'],
       'TINAJA_CHAT_CHANNELS' => ENV['TINAJA_CHAT_CHANNELS'],
       'TINAJA_BRAVE_API_KEY' => ENV['TINAJA_BRAVE_API_KEY'],
+      'TINAJA_SEARX_URL' => ENV['TINAJA_SEARX_URL'],
     }
     ENV['TINAJA_LLM_URL'] = 'http://127.0.0.1:1/v1/chat/completions'
     ENV.delete('TINAJA_LLM_MODEL')
     ENV.delete('TINAJA_CHAT_CHANNELS')
     ENV.delete('TINAJA_BRAVE_API_KEY')
+    ENV.delete('TINAJA_SEARX_URL')
   end
 
   def teardown
@@ -168,7 +170,86 @@ class BotTest < Minitest::Test
     assert_equal 'Chubasco por la tarde, según su informe.', snippet
   end
 
-  def test_the_lamp_stays_dark_without_a_key
-    refute TinajaSearch.results('clima hoy en Mérida') # nil: neither findings nor a crash
+  def test_the_money_lamp_reads_both_rates_the_official_first
+    entries = JSON.parse('[' \
+      '{"nombre":"Dólar","fuente":"oficial","promedio":896.1225,"fechaActualizacion":"2026-11-06T00:00:00-04:00"},' \
+      '{"nombre":"Paralelo","fuente":"paralelo","promedio":1009.952417,"fechaActualizacion":"2026-11-06T17:01:00"}]')
+    findings = TinajaSearch.findings_money(entries, 'https://ve.dolarapi.com/v1/dolares', 'Dólar')
+    assert_equal ['Dólar oficial en Venezuela: 896,12 Bs', 'Dólar paralelo en Venezuela: 1.009,95 Bs'],
+                 findings.map { |finding| finding[0] }
+    assert_includes findings.first[2], 'fuente: oficial'
+  end
+
+  def test_the_clima_lamp_reads_the_sky_of_merida
+    body = JSON.parse('{"current":{"temperature_2m":22.0,"precipitation":0.0,"weather_code":3},' \
+      '"daily":{"time":["2026-11-06","2026-11-07"],"temperature_2m_max":[24.4,25.4],"temperature_2m_min":[17.0,15.6],"precipitation_sum":[3.4,1.5]}}')
+    title, href, snippet = TinajaSearch.findings_clima(body, 'https://api.open-meteo.com/v1/forecast').first
+    assert_equal 'El cielo de Mérida ahora: 22,0 °C, nublado', title
+    assert_equal 'https://api.open-meteo.com/v1/forecast', href
+    assert_includes snippet, 'de 17,0 °C a 24,4 °C, 3,4 mm de agua'
+    assert_includes snippet, 'mañana: de 15,6 °C a 25,4 °C, 1,5 mm de agua'
+  end
+
+  def test_the_trade_recognizes_money_and_sky_and_leaves_the_rest
+    assert_nil TinajaSearch.trade_of('¿quién eres y qué sabes hacer?')
+    assert_equal :dolar, TinajaSearch.trade_of('¿precio del dólar hoy?')
+    assert_equal :euro, TinajaSearch.trade_of('¿y el euro cuánto vale?')
+    assert_equal :clima, TinajaSearch.trade_of('¿cómo está el clima en Mérida?')
+    assert_equal :clima, TinajaSearch.trade_of('¿qué tiempo hace hoy?')
+    # 'tiempo' without an actuality is not the sky: the bot keeps his own voice
+    assert_nil TinajaSearch.trade_of('¿cuánto tiempo le dedicó al código?')
+  end
+
+  def test_results_reach_the_money_lamp_first
+    called = []
+    stub_dolar = '[' \
+      '{"nombre":"Dólar","fuente":"oficial","promedio":896.1225,"fechaActualizacion":"2026-11-06T00:00:00-04:00"}]'
+    TinajaSearch.stub(:get, lambda { |uri, _headers = {}|
+      called << uri.to_s
+      stub_dolar
+    }) do
+      findings = TinajaSearch.results('¿precio del dólar hoy?')
+      assert_equal 1, findings.size
+      assert_includes findings.first[0], '896,12'
+    end
+    assert_equal ['https://ve.dolarapi.com/v1/dolares'], called.uniq # no web search at all
+  end
+
+  def test_the_ladder_falls_straight_to_the_public_feeds
+    calls = []
+    TinajaSearch.stub(:get, lambda { |uri, _headers = {}| calls << uri.host.to_s }) do
+      assert_nil TinajaSearch.results('¿quién ganó la FUTVE?') # every lamp out: no findings, no crash
+    end
+    # without a key and without the owner's SearXNG, the feeds carry the glance: Google first, Bing after
+    assert_equal %w[news.google.com www.bing.com], calls
+  end
+
+  def test_the_first_feed_that_answers_carries_the_glance
+    fixture = '<?xml version="1.0"?><rss><channel>' \
+      '<item><title>Normal tiempo en Mérida</title><link>https://x.example/a</link>' \
+      '<description>Chubasco por la tarde.</description></item>' \
+      '<item><title></title><link>https://x.example/b</link><description>sin título</description></item>' \
+      '</channel></rss>'
+    TinajaSearch.stub(:get, lambda { |uri, _headers = {}|
+      uri.to_s.include?('news.google.com') ? fixture : nil
+    }) do
+      findings = TinajaSearch.results('¿quién ganó la FUTVE?')
+      assert_equal 1, findings.size # both the dead lamp and the untitled item stay out
+      assert_equal ['Normal tiempo en Mérida', 'https://x.example/a', 'Chubasco por la tarde.'], findings.first
+    end
+  end
+
+  def test_the_owner_own_lamp_leads_the_ladder
+    ENV['TINAJA_SEARX_URL'] = 'http://127.0.0.1:8080'
+    calls = []
+    TinajaSearch.stub(:get, lambda { |uri, _headers = {}|
+      calls << uri.host.to_s
+      '{"results":[{"title":"Eco","url":"https://eco.example/1","content":"el circuito responde"}]}'
+    }) do
+      findings = TinajaSearch.results('¿quién ganó la FUTVE?')
+      assert_equal 'Eco', findings.first[0]
+      assert_equal 'el circuito responde', findings.first[2]
+    end
+    assert_equal %w[127.0.0.1], calls # the own answer closes the ladder; the feeds stay shut
   end
 end
