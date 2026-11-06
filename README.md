@@ -47,6 +47,20 @@ uv run tinaja-bot run
 cd plugin && bundle exec rake test
 ```
 
+## Conversations backed by a local LLM
+tinaja-bot converses on [Ollama](https://ollama.com)'s OpenAI-compatible endpoint, with stdlib `net/http`
+(see `bot.toml`'s plugin and `plugin/llm.rb`):
+```bash
+curl -fsSL https://ollama.com/install.sh | sh   # on the machine that runs the bot
+ollama pull qwen2.5:3b
+```
+He answers when addressed: `@tinaja-bot …` mentions anywhere, `!hable`, and — in the channels listed in
+`TINAJA_CHAT_CHANNELS` (see `env.sample`) — every Member message, Commands excluded. Context is the
+channel's recent chatter (protocol `history`); the pool never includes bot messages, so he remembers the
+channel, not himself. When the engine is down, members see a gentle "la tinaja está seca" — never a stack
+trace. From Docker, point `TINAJA_LLM_URL` at the host (e.g. `http://<host-ip>:11434/v1/chat/completions`)
+and pass `--env-file .env` as usual.
+
 ## Docker
 The image builds on Linux, so add Linux to the gem lockfile once:
 ```bash
