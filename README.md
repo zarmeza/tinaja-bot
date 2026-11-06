@@ -61,6 +61,14 @@ channel, not himself. When the engine is down, members see a gentle "la tinaja e
 trace. From Docker, point `TINAJA_LLM_URL` at the host (e.g. `http://<host-ip>:11434/v1/chat/completions`)
 and pass `--env-file .env` as usual.
 
+### What he doesn't know, the web lends
+The engine answers from knowledge that froze at his training; for what the world decided since — today's
+prices, names, weather — he asks the day-lamp instead. First pass: he answers of his own knowledge, or
+ends with a private `NECESITO_AVERIGUAR: <query>` seal. When he seals it, a Brave Search lookup feeds the
+second pass (with sources, but confessed if the say is thin — never invented). The lamp is Brave Search
+under `TINAJA_BRAVE_API_KEY` (free tier, 2000 consultations a month; see `env.sample`); with no
+key set, he just answers of what he knows, as always (`plugin/search.rb`, `plugin/llm.rb`).
+
 ## Docker
 The image builds on Linux, so add Linux to the gem lockfile once:
 ```bash

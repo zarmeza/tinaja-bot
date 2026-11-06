@@ -48,7 +48,7 @@ end
 def converse(message, user_text)
   history = PLUGIN.history(message.channel_id, TinajaLLM::HISTORY_LIMIT)
   turns = TinajaLLM.turns(history, current_message: message, user_text: user_text)
-  answer = TinajaLLM.complete([{'role' => 'system', 'content' => TinajaLLM::SYSTEM_PROMPT}] + turns)
+  answer = TinajaLLM.complete_with_search(turns)
   message.reply(answer || TinajaLLM::DRY_TINAJA)
 rescue StandardError => e
   warn "tinaja-bot: conversation failed: #{e.class}: #{e.message}"

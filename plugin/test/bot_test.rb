@@ -15,10 +15,12 @@ class BotTest < Minitest::Test
       'TINAJA_LLM_URL' => ENV['TINAJA_LLM_URL'],
       'TINAJA_LLM_MODEL' => ENV['TINAJA_LLM_MODEL'],
       'TINAJA_CHAT_CHANNELS' => ENV['TINAJA_CHAT_CHANNELS'],
+      'TINAJA_BRAVE_API_KEY' => ENV['TINAJA_BRAVE_API_KEY'],
     }
     ENV['TINAJA_LLM_URL'] = 'http://127.0.0.1:1/v1/chat/completions'
     ENV.delete('TINAJA_LLM_MODEL')
     ENV.delete('TINAJA_CHAT_CHANNELS')
+    ENV.delete('TINAJA_BRAVE_API_KEY')
   end
 
   def teardown
@@ -88,5 +90,85 @@ class BotTest < Minitest::Test
     assert_includes turns.first['content'], 'antes hice una pregunta larga que ya pasó de moda'
     assert_equal 'jane: pero really, ¿sirve?', turns.last['content']
     refute_includes turns.last['content'], 'antes hice'
+  end
+
+  # The lamp (TinajaSearch) is stubbed out: tests never touch the live web
+  def test_a_confident_answer_needs_no_lamp
+    passes = []
+    TinajaSearch.stub(:results, ->(_q) { flunk 'the lamp must not light for known matters' }) do
+      TinajaLLM.stub(:complete, lambda { |turns|
+        passes << turns.first['content']
+        'Castellano sereno y fiel.'
+      }) do
+        answer = TinajaLLM.complete_with_search([{'role' => 'user', 'content' => 'Eleazar: ¿quién eres?'}])
+        assert_equal 'Castellano sereno y fiel.', answer
+      end
+    end
+    assert_equal [TinajaLLM::FIRST_PASS_PROMPT], passes.uniq # one pass and no more
+  end
+
+  def test_a_doubtful_answer_receives_the_web_and_answers_upon_it
+    passes = []
+    queries = []
+    TinajaSearch.stub(:results, lambda { |query|
+      queries << query
+      [['El tiempo en Mérida', 'https://tiempo.example/merida', 'Chubasco por la tarde.']]
+    }) do
+      TinajaLLM.stub(:complete, lambda { |turns|
+        system = turns.first['content']
+        if system.include?('Ya se averiguó algo en la web')
+          passes << system
+          'Según lo que hoy dice la red, chubasco por la tarde en Mérida; el sitio es tiempo.example.'
+        elsif system == TinajaLLM::FIRST_PASS_PROMPT
+          "Del cielo de hoy mejor me callaría.\nNECESITO_AVERIGUAR: clima hoy en Mérida"
+        else
+          flunk 'the second pass must carry the web findings'
+        end
+      }) do
+        answer = TinajaLLM.complete_with_search([{'role' => 'user', 'content' => 'Eleazar: ¿llueve en Mérida hoy?'}])
+        assert_includes answer, 'chubasco por la tarde'
+        refute_includes answer, 'NECESITO_AVERIGUAR' # the seal is never shown
+      end
+    end
+    assert_equal ['clima hoy en Mérida'], queries
+    assert_equal [TinajaLLM::SECOND_PASS_PROMPT], passes.uniq
+  end
+
+  def test_a_blind_lamp_lets_the_engine_confess_instead_of_inventing
+    TinajaSearch.stub(:results, ->(_q) { nil }) do
+      TinajaLLM.stub(:complete, lambda { |turns|
+        if turns.first['content'].include?('Ya se averiguó algo en la web')
+          # the findings turn (only the confession note) reached it; its answer still advances
+          'La red no me dejó verla, y no voy a inventar: mañana con mejor lámpara.'
+        else
+          "Ni idea del asunto, de verdad.\nNECESITO_AVERIGUAR: la libra hoy"
+        end
+      }) do
+        answer = TinajaLLM.complete_with_search([{'role' => 'user', 'content' => 'Eleazar: ¿y la libra?'}])
+        assert_equal 'La red no me dejó verla, y no voy a inventar: mañana con mejor lámpara.', answer
+      end
+    end
+  end
+
+  def test_the_dry_engine_stays_dry_through_the_lamp
+    # dead endpoint: pass one answers nil, and the whole turn answers nil (no lamp is lit for it)
+    assert_nil TinajaLLM.complete_with_search([{'role' => 'user', 'content' => 'Eleazar: ¿quién eres?'}])
+  end
+
+  def test_the_web_reads_brave_json_undefiled
+    body = '{"web":{"results":[' \
+           '{"title":"El tiempo en <b>Mérida</b>","url":"https://tiempo.example/merida","description":"Chubasco por la tarde, <b>según</b> su informe."},' \
+           '{"title":"","url":"https://tiempo.example/nada"}' \
+           "]}}"
+    findings = TinajaSearch.parse(body)
+    assert_equal 1, findings.size # the untitled finding doesn't make it to the lantern
+    title, href, snippet = findings.first
+    assert_equal 'El tiempo en Mérida', title
+    assert_equal 'https://tiempo.example/merida', href
+    assert_equal 'Chubasco por la tarde, según su informe.', snippet
+  end
+
+  def test_the_lamp_stays_dark_without_a_key
+    refute TinajaSearch.results('clima hoy en Mérida') # nil: neither findings nor a crash
   end
 end
