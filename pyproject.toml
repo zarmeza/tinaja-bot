@@ -1,0 +1,13 @@
+[project]
+name = "tinaja-bot-gocho"
+version = "0.1.0"
+description = "tinaja-bot-gocho, a Discord bot built on tinaja-bot-base"
+readme = "README.md"
+requires-python = ">=3.14"
+# Only the host that connects to Discord is Python; the bot's code is the Ruby in plugin/
+dependencies = [
+    "tinaja-bot-base",
+]
+
+[tool.uv.sources]
+tinaja-bot-base = { git = "https://github.com/xionjames/tinaja-bot-base", rev = "main" }

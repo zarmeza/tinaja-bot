@@ -1,0 +1,11 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+# The SDK lives in the tinaja-bot-base repo, next to the framework
+gem 'tinaja', git: 'https://github.com/xionjames/tinaja-bot-base', ref: 'main', glob: 'sdk/ruby/*.gemspec'
+
+group :development, :test do
+  gem 'minitest', '~> 5.25'
+  gem 'rake', '~> 13.2'
+end
