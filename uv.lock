@@ -417,16 +417,7 @@ wheels = [
 ]
 
 [[package]]
-name = "tinaja-bot-base"
-version = "0.1.0"
-source = { git = "https://github.com/xionjames/tinaja-bot-base?rev=main#2c773a11614559a8b1689ab388a124c74d683b46" }
-dependencies = [
-    { name = "discord-py" },
-    { name = "python-dotenv" },
-]
-
-[[package]]
-name = "tinaja-bot-gocho"
+name = "tinaja-bot"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
@@ -435,6 +426,15 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "tinaja-bot-base", git = "https://github.com/xionjames/tinaja-bot-base?rev=main" }]
+
+[[package]]
+name = "tinaja-bot-base"
+version = "0.1.0"
+source = { git = "https://github.com/xionjames/tinaja-bot-base?rev=main#2c773a11614559a8b1689ab388a124c74d683b46" }
+dependencies = [
+    { name = "discord-py" },
+    { name = "python-dotenv" },
+]
 
 [[package]]
 name = "yarl"

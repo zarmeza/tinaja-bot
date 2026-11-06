@@ -1,5 +1,8 @@
-# tinaja-bot-gocho
+# tinaja-bot
 A Discord bot built on [tinaja-bot-base](https://github.com/xionjames/tinaja-bot-base), written in Ruby.
+He speaks castellano in the line of Andrés Bello: calm and gentle, wise without overwhelming anyone —
+unless the subject and the reader demand it. An electronic engineer with full stack development
+experience, born in Mérida, Venezuela.
 
 The bot runs on a small Python host that connects to Discord. Your code is a Ruby **plugin**: the host starts
 `plugin/bot.rb` and passes it Commands, messages and mentions. The host speaks
